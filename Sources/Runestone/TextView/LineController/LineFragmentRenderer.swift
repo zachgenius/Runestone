@@ -48,7 +48,8 @@ private extension LineFragmentRenderer {
         for highlightedRange in highlightedRangeFragments {
             let startX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.lowerBound, nil)
             let endX: CGFloat
-            if shouldHighlightLineEnding(for: highlightedRange) {
+            // Only extend to canvas width for background highlights, not for underlines/squiggly
+            if highlightedRange.style == .background && shouldHighlightLineEnding(for: highlightedRange) {
                 endX = canvasSize.width
             } else {
                 endX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.upperBound, nil)
