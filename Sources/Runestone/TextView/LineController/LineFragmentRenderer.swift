@@ -54,18 +54,73 @@ private extension LineFragmentRenderer {
                 endX = CTLineGetOffsetForStringIndex(lineFragment.line, highlightedRange.range.upperBound, nil)
             }
             let rect = CGRect(x: startX, y: 0, width: endX - startX, height: lineFragment.scaledSize.height)
-            let roundedCorners = highlightedRange.roundedCorners
-            context.setFillColor(highlightedRange.color.cgColor)
-            if !roundedCorners.isEmpty && highlightedRange.cornerRadius > 0 {
-                let cornerRadii = CGSize(width: highlightedRange.cornerRadius, height: highlightedRange.cornerRadius)
-                let bezierPath = UIBezierPath(roundedRect: rect, byRoundingCorners: roundedCorners, cornerRadii: cornerRadii)
-                context.addPath(bezierPath.cgPath)
-                context.fillPath()
-            } else {
-                context.fill(rect)
+
+            switch highlightedRange.style {
+            case .background:
+                drawBackgroundHighlight(context: context, rect: rect, highlightedRange: highlightedRange)
+            case .underline:
+                drawUnderline(context: context, rect: rect, color: highlightedRange.color)
+            case .squiggly:
+                drawSquigglyUnderline(context: context, rect: rect, color: highlightedRange.color)
             }
         }
         context.restoreGState()
+    }
+
+    private func drawBackgroundHighlight(context: CGContext, rect: CGRect, highlightedRange: HighlightedRangeFragment) {
+        let roundedCorners = highlightedRange.roundedCorners
+        context.setFillColor(highlightedRange.color.cgColor)
+        if !roundedCorners.isEmpty && highlightedRange.cornerRadius > 0 {
+            let cornerRadii = CGSize(width: highlightedRange.cornerRadius, height: highlightedRange.cornerRadius)
+            let bezierPath = UIBezierPath(roundedRect: rect, byRoundingCorners: roundedCorners, cornerRadii: cornerRadii)
+            context.addPath(bezierPath.cgPath)
+            context.fillPath()
+        } else {
+            context.fill(rect)
+        }
+    }
+
+    private func drawUnderline(context: CGContext, rect: CGRect, color: UIColor) {
+        let lineWidth: CGFloat = 1.0
+        let y = rect.maxY - lineWidth - 1
+        context.setStrokeColor(color.cgColor)
+        context.setLineWidth(lineWidth)
+        context.move(to: CGPoint(x: rect.minX, y: y))
+        context.addLine(to: CGPoint(x: rect.maxX, y: y))
+        context.strokePath()
+    }
+
+    private func drawSquigglyUnderline(context: CGContext, rect: CGRect, color: UIColor) {
+        let waveHeight: CGFloat = 2.0
+        let waveLength: CGFloat = 4.0
+        let lineWidth: CGFloat = 1.0
+        let baseY = rect.maxY - 2
+
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: rect.minX, y: baseY))
+
+        var x = rect.minX
+        var goingUp = true
+
+        while x < rect.maxX {
+            let nextX = min(x + waveLength / 2, rect.maxX)
+            let controlY = goingUp ? baseY - waveHeight * 1.2 : baseY + waveHeight * 1.2
+
+            path.addQuadCurve(
+                to: CGPoint(x: nextX, y: baseY),
+                controlPoint: CGPoint(x: (x + nextX) / 2, y: controlY)
+            )
+
+            x = nextX
+            goingUp.toggle()
+        }
+
+        context.setStrokeColor(color.cgColor)
+        context.setLineWidth(lineWidth)
+        context.setLineCap(.round)
+        context.setLineJoin(.round)
+        context.addPath(path.cgPath)
+        context.strokePath()
     }
 
     private func drawMarkedRange(to context: CGContext) {

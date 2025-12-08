@@ -1,5 +1,15 @@
 import UIKit
 
+/// Style of highlight decoration
+public enum HighlightStyle: Equatable {
+    /// Fill background with color
+    case background
+    /// Draw a straight underline
+    case underline
+    /// Draw a wavy/squiggly underline (like error indicators in IDEs)
+    case squiggly
+}
+
 /// Range of text to highlight.
 public final class HighlightedRange {
     /// Unique identifier of the highlighted range.
@@ -8,8 +18,10 @@ public final class HighlightedRange {
     public let range: NSRange
     /// Color to highlight the text with.
     public let color: UIColor
-    /// Corner radius of the highlight.
+    /// Corner radius of the highlight (only applies to background style).
     public let cornerRadius: CGFloat
+    /// Style of the highlight decoration.
+    public let style: HighlightStyle
 
     /// Create a new highlighted range.
     /// - Parameters:
@@ -17,17 +29,19 @@ public final class HighlightedRange {
     ///   - range: Range in the text to highlight.
     ///   - color: Color to highlight the text with.
     ///   - cornerRadius: Corner radius of the highlight. A value of zero or less means no corner radius. Defaults to 0.
-    public init(id: String = UUID().uuidString, range: NSRange, color: UIColor, cornerRadius: CGFloat = 0) {
+    ///   - style: Style of decoration. Defaults to background fill.
+    public init(id: String = UUID().uuidString, range: NSRange, color: UIColor, cornerRadius: CGFloat = 0, style: HighlightStyle = .background) {
         self.id = id
         self.range = range
         self.color = color
         self.cornerRadius = cornerRadius
+        self.style = style
     }
 }
 
 extension HighlightedRange: Equatable {
     public static func == (lhs: HighlightedRange, rhs: HighlightedRange) -> Bool {
-        lhs.id == rhs.id && lhs.range == rhs.range && lhs.color == rhs.color
+        lhs.id == rhs.id && lhs.range == rhs.range && lhs.color == rhs.color && lhs.style == rhs.style
     }
 }
 
