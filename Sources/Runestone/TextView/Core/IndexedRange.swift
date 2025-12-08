@@ -1,22 +1,29 @@
 import UIKit
 
-final class IndexedRange: UITextRange {
-    let range: NSRange
-    override var start: UITextPosition {
+/// A UITextRange subclass that wraps an NSRange for use with UITextInput methods.
+public final class IndexedRange: UITextRange {
+    /// The underlying NSRange
+    public let range: NSRange
+
+    override public var start: UITextPosition {
         IndexedPosition(index: range.location)
     }
-    override var end: UITextPosition {
+
+    override public var end: UITextPosition {
         IndexedPosition(index: range.location + range.length)
     }
-    override var isEmpty: Bool {
+
+    override public var isEmpty: Bool {
         range.length == 0
     }
 
-    init(_ range: NSRange) {
+    /// Create an IndexedRange from an NSRange
+    public init(_ range: NSRange) {
         self.range = range
     }
 
-    convenience init(location: Int, length: Int) {
+    /// Create an IndexedRange from location and length
+    public convenience init(location: Int, length: Int) {
         let range = NSRange(location: location, length: length)
         self.init(range)
     }
