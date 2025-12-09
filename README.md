@@ -14,6 +14,8 @@ Runestone uses GitHub's [Tree-sitter](https://tree-sitter.github.io/tree-sitter/
 [![Twitter](https://img.shields.io/badge/Twitter-@simonbs-blue.svg?style=flat)](https://twitter.com/simonbs)
 [![Mastodon](https://img.shields.io/badge/Mastodon-@simonbs-blue.svg?style=flat)](https://mastodon.social/@simonbs)
 
+Integrated tree-sitter version: 0.25.10
+
 ## ✨ Features
 
 - Syntax highlighting.
