@@ -157,6 +157,12 @@ open class TextView: UIScrollView {
             textInputView.setUndoManager(newValue)
         }
     }
+    /// Sets the text content while preserving the undo stack.
+    /// Use this when restoring file content after switching tabs to keep undo history intact.
+    /// - Parameter text: The new text content to set.
+    public func setTextPreservingUndoStack(_ text: String) {
+        textInputView.setStringPreservingUndoStack(text as NSString)
+    }
     /// The color of the insertion point. This can be used to control the color of the caret.
     public var insertionPointColor: UIColor {
         get {

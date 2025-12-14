@@ -145,6 +145,14 @@ final class TextInputView: UIView, UITextInput {
         timedUndoManager = undoManager ?? TimedUndoManager()
     }
 
+    /// Sets the string content while preserving the undo stack.
+    /// Use this when restoring file content after switching tabs to keep undo history intact.
+    func setStringPreservingUndoStack(_ newString: NSString) {
+        preserveUndoStackWhenSettingString = true
+        string = newString
+        preserveUndoStackWhenSettingString = false
+    }
+
     // MARK: - Appearance
     var theme: Theme {
         didSet {
