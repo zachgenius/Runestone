@@ -139,6 +139,12 @@ final class TextInputView: UIView, UITextInput {
         timedUndoManager
     }
 
+    /// Sets a custom undo manager, allowing undo history to be swapped when switching between files.
+    /// - Parameter undoManager: The undo manager to use. If nil, creates a new TimedUndoManager.
+    func setUndoManager(_ undoManager: TimedUndoManager?) {
+        timedUndoManager = undoManager ?? TimedUndoManager()
+    }
+
     // MARK: - Appearance
     var theme: Theme {
         didSet {
@@ -571,7 +577,7 @@ final class TextInputView: UIView, UITextInput {
     private let lineControllerFactory: LineControllerFactory
     private let lineControllerStorage: LineControllerStorage
     private let layoutManager: LayoutManager
-    private let timedUndoManager = TimedUndoManager()
+    private(set) var timedUndoManager = TimedUndoManager()
     private let indentController: IndentController
     private let lineMovementController: LineMovementController
     private let pageGuideController = PageGuideController()

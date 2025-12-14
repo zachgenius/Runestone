@@ -147,6 +147,16 @@ open class TextView: UIScrollView {
     override public var undoManager: UndoManager? {
         textInputView.undoManager
     }
+    /// The timed undo manager used by the text view.
+    /// This can be cached and restored to preserve undo history when switching between files.
+    public var timedUndoManager: TimedUndoManager {
+        get {
+            textInputView.timedUndoManager
+        }
+        set {
+            textInputView.setUndoManager(newValue)
+        }
+    }
     /// The color of the insertion point. This can be used to control the color of the caret.
     public var insertionPointColor: UIColor {
         get {

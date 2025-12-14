@@ -1,23 +1,23 @@
 import Foundation
 
-final class TimedUndoManager: UndoManager {
+public final class TimedUndoManager: UndoManager {
     private let endGroupingInterval: TimeInterval = 1
     private var endGroupingTimer: Timer?
     private var hasOpenGroup: Bool {
         groupingLevel > 0
     }
 
-    override init() {
+    override public init() {
         super.init()
         groupsByEvent = false
     }
 
-    override func removeAllActions() {
+    override public func removeAllActions() {
         cancelTimer()
         super.removeAllActions()
     }
 
-    override func beginUndoGrouping() {
+    override public func beginUndoGrouping() {
         if !hasOpenGroup {
             super.beginUndoGrouping()
             if endGroupingTimer == nil {
@@ -26,14 +26,14 @@ final class TimedUndoManager: UndoManager {
         }
     }
 
-    override func endUndoGrouping() {
+    override public func endUndoGrouping() {
         cancelTimer()
         if hasOpenGroup {
             super.endUndoGrouping()
         }
     }
 
-    override func undo() {
+    override public func undo() {
         endUndoGrouping()
         super.undo()
     }
