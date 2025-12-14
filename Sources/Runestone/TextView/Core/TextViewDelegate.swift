@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// The methods for receiving editing-related messages for the text view.
 public protocol TextViewDelegate: AnyObject {
@@ -101,6 +102,15 @@ public protocol TextViewDelegate: AnyObject {
     ///
     /// The text view will call this method when the user chooses to replace the text in the highlighted range, for example by selecting the action in a [UIMenuController](https://developer.apple.com/documentation/uikit/uimenucontroller).
     func textView(_ textView: TextView, replaceTextIn highlightedRange: HighlightedRange)
+    /// Asks the delegate if it should handle a key press before the text view processes it.
+    /// - Parameters:
+    ///   - textView: The text view that received the key press.
+    ///   - keyCode: The key code of the pressed key.
+    ///   - modifierFlags: The modifier flags (Shift, Command, etc.) active during the key press.
+    /// - Returns: `true` if the delegate handled the key press and the text view should not process it; `false` to let the text view handle it normally.
+    ///
+    /// Use this method to intercept specific key presses, such as arrow keys for code completion navigation.
+    func textView(_ textView: TextView, shouldInterceptKeyPress keyCode: UIKeyboardHIDUsage, modifierFlags: UIKeyModifierFlags) -> Bool
 }
 
 public extension TextViewDelegate {
@@ -147,4 +157,8 @@ public extension TextViewDelegate {
     }
 
     func textView(_ textView: TextView, replaceTextIn highlightedRange: HighlightedRange) {}
+
+    func textView(_ textView: TextView, shouldInterceptKeyPress keyCode: UIKeyboardHIDUsage, modifierFlags: UIKeyModifierFlags) -> Bool {
+        false
+    }
 }

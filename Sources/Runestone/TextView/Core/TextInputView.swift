@@ -18,6 +18,7 @@ protocol TextInputViewDelegate: AnyObject {
     func textInputViewDidUpdateMarkedRange(_ view: TextInputView)
     func textInputView(_ view: TextInputView, canReplaceTextIn highlightedRange: HighlightedRange) -> Bool
     func textInputView(_ view: TextInputView, replaceTextIn highlightedRange: HighlightedRange)
+    func textInputView(_ view: TextInputView, shouldInterceptKeyPress keyCode: UIKeyboardHIDUsage, modifierFlags: UIKeyModifierFlags) -> Bool
 }
 
 // swiftlint:disable:next type_body_length
@@ -922,6 +923,19 @@ final class TextInputView: UIView, UITextInput {
             invalidateLines()
             layoutManager.setNeedsLayout()
         }
+    }
+
+    override func pressesBegan(_ presses: Set<UIPress>, with event: UIPressesEvent?) {
+        // Check if delegate wants to intercept this key press
+        if let press = presses.first, let key = press.key {
+            let keyCode = key.keyCode
+            let modifiers = key.modifierFlags
+            if delegate?.textInputView(self, shouldInterceptKeyPress: keyCode, modifierFlags: modifiers) == true {
+                // Key was intercepted, don't process further
+                return
+            }
+        }
+        super.pressesBegan(presses, with: event)
     }
 
     override func pressesEnded(_ presses: Set<UIPress>, with event: UIPressesEvent?) {

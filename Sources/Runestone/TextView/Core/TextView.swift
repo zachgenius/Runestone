@@ -1445,6 +1445,10 @@ extension TextView: TextInputViewDelegate {
     func textInputView(_ view: TextInputView, replaceTextIn highlightedRange: HighlightedRange) {
         editorDelegate?.textView(self, replaceTextIn: highlightedRange)
     }
+
+    func textInputView(_ view: TextInputView, shouldInterceptKeyPress keyCode: UIKeyboardHIDUsage, modifierFlags: UIKeyModifierFlags) -> Bool {
+        editorDelegate?.textView(self, shouldInterceptKeyPress: keyCode, modifierFlags: modifierFlags) ?? false
+    }
 }
 
 // MARK: - HighlightNavigationControllerDelegate
