@@ -6,6 +6,7 @@ protocol EditMenuControllerDelegate: AnyObject {
     func editMenuController(_ controller: EditMenuController, caretRectAt location: Int) -> CGRect
     func editMenuControllerShouldReplaceText(_ controller: EditMenuController)
     func selectedRange(for controller: EditMenuController) -> NSRange?
+    func editMenuController(_ controller: EditMenuController, customMenuFor range: NSRange, suggestedActions: [UIMenuElement]) -> [UIMenuElement]?
 }
 
 final class EditMenuController: NSObject {
@@ -41,10 +42,26 @@ final class EditMenuController: NSObject {
     }
 
     func editMenu(for textRange: UITextRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
-        guard let textRange = textRange as? IndexedRange, let replaceAction = replaceActionIfAvailable(for: textRange.range) else {
+        guard let textRange = textRange as? IndexedRange else {
             return UIMenu(children: suggestedActions)
         }
-        return UIMenu(children: suggestedActions + [replaceAction])
+
+        var allActions: [UIMenuElement] = []
+
+        // Add custom actions first (if any)
+        if let customActions = delegate?.editMenuController(self, customMenuFor: textRange.range, suggestedActions: suggestedActions) {
+            allActions.append(contentsOf: customActions)
+        }
+
+        // Add system suggested actions
+        allActions.append(contentsOf: suggestedActions)
+
+        // Add replace action if available
+        if let replaceAction = replaceActionIfAvailable(for: textRange.range) {
+            allActions.append(replaceAction)
+        }
+
+        return UIMenu(children: allActions)
     }
 }
 
@@ -95,10 +112,25 @@ extension EditMenuController: UIEditMenuInteractionDelegate {
         menuFor configuration: UIEditMenuConfiguration,
         suggestedActions: [UIMenuElement]
     ) -> UIMenu? {
-        if let selectedRange = delegate?.selectedRange(for: self), let replaceAction = replaceActionIfAvailable(for: selectedRange) {
-            return UIMenu(children: [replaceAction] + suggestedActions)
-        } else {
+        guard let selectedRange = delegate?.selectedRange(for: self) else {
             return UIMenu(children: suggestedActions)
         }
+
+        var allActions: [UIMenuElement] = []
+
+        // Add custom actions first (if any)
+        if let customActions = delegate?.editMenuController(self, customMenuFor: selectedRange, suggestedActions: suggestedActions) {
+            allActions.append(contentsOf: customActions)
+        }
+
+        // Add system suggested actions
+        allActions.append(contentsOf: suggestedActions)
+
+        // Add replace action if available
+        if let replaceAction = replaceActionIfAvailable(for: selectedRange) {
+            allActions.append(replaceAction)
+        }
+
+        return UIMenu(children: allActions)
     }
 }

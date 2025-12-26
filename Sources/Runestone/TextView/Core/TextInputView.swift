@@ -19,6 +19,7 @@ protocol TextInputViewDelegate: AnyObject {
     func textInputView(_ view: TextInputView, canReplaceTextIn highlightedRange: HighlightedRange) -> Bool
     func textInputView(_ view: TextInputView, replaceTextIn highlightedRange: HighlightedRange)
     func textInputView(_ view: TextInputView, shouldInterceptKeyPress keyCode: UIKeyboardHIDUsage, modifierFlags: UIKeyModifierFlags) -> Bool
+    func textInputView(_ view: TextInputView, customMenuFor range: NSRange, suggestedActions: [UIMenuElement]) -> [UIMenuElement]?
 }
 
 // swiftlint:disable:next type_body_length
@@ -1704,5 +1705,9 @@ extension TextInputView: EditMenuControllerDelegate {
 
     func selectedRange(for controller: EditMenuController) -> NSRange? {
         selectedRange
+    }
+
+    func editMenuController(_ controller: EditMenuController, customMenuFor range: NSRange, suggestedActions: [UIMenuElement]) -> [UIMenuElement]? {
+        delegate?.textInputView(self, customMenuFor: range, suggestedActions: suggestedActions)
     }
 }

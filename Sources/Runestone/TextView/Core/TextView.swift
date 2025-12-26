@@ -1449,6 +1449,10 @@ extension TextView: TextInputViewDelegate {
     func textInputView(_ view: TextInputView, shouldInterceptKeyPress keyCode: UIKeyboardHIDUsage, modifierFlags: UIKeyModifierFlags) -> Bool {
         editorDelegate?.textView(self, shouldInterceptKeyPress: keyCode, modifierFlags: modifierFlags) ?? false
     }
+
+    func textInputView(_ view: TextInputView, customMenuFor range: NSRange, suggestedActions: [UIMenuElement]) -> [UIMenuElement]? {
+        editorDelegate?.textView(self, customMenuFor: range, suggestedActions: suggestedActions)
+    }
 }
 
 // MARK: - HighlightNavigationControllerDelegate

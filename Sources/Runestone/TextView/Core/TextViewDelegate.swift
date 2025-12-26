@@ -111,6 +111,16 @@ public protocol TextViewDelegate: AnyObject {
     ///
     /// Use this method to intercept specific key presses, such as arrow keys for code completion navigation.
     func textView(_ textView: TextView, shouldInterceptKeyPress keyCode: UIKeyboardHIDUsage, modifierFlags: UIKeyModifierFlags) -> Bool
+    /// Asks the delegate for custom menu actions to include in the edit menu.
+    /// - Parameters:
+    ///   - textView: The text view showing the edit menu.
+    ///   - range: The text range for which the menu is being shown.
+    ///   - suggestedActions: The system-suggested actions (Cut, Copy, Paste, etc.)
+    /// - Returns: An array of UIMenuElement to add to the menu, or nil to use only system actions.
+    ///
+    /// Use this method to add custom actions like "Go to Definition" or "Find References" to the edit menu.
+    /// The custom actions will be added before the system-suggested actions.
+    func textView(_ textView: TextView, customMenuFor range: NSRange, suggestedActions: [UIMenuElement]) -> [UIMenuElement]?
 }
 
 public extension TextViewDelegate {
@@ -160,5 +170,9 @@ public extension TextViewDelegate {
 
     func textView(_ textView: TextView, shouldInterceptKeyPress keyCode: UIKeyboardHIDUsage, modifierFlags: UIKeyModifierFlags) -> Bool {
         false
+    }
+
+    func textView(_ textView: TextView, customMenuFor range: NSRange, suggestedActions: [UIMenuElement]) -> [UIMenuElement]? {
+        nil
     }
 }
