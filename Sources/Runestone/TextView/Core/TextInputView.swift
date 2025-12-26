@@ -847,6 +847,11 @@ final class TextInputView: UIView, UITextInput {
         }
     }
 
+    /// Get the character index closest to a point
+    func closestIndex(to point: CGPoint) -> Int? {
+        layoutManager.closestIndex(to: point)
+    }
+
     func setLanguageMode(_ languageMode: LanguageMode, completion: ((Bool) -> Void)? = nil) {
         let internalLanguageMode = InternalLanguageModeFactory.internalLanguageMode(
             from: languageMode,

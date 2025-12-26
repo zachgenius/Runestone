@@ -121,6 +121,15 @@ public protocol TextViewDelegate: AnyObject {
     /// Use this method to add custom actions like "Go to Definition" or "Find References" to the edit menu.
     /// The custom actions will be added before the system-suggested actions.
     func textView(_ textView: TextView, customMenuFor range: NSRange, suggestedActions: [UIMenuElement]) -> [UIMenuElement]?
+    /// Called when the user Command+clicks at a location in the text view.
+    /// - Parameters:
+    ///   - textView: The text view that received the Command+click.
+    ///   - location: The character index (offset from start) where the click occurred.
+    /// - Returns: `true` if the delegate handled the Command+click; `false` to let the text view handle it normally.
+    ///
+    /// Use this method to implement "go to definition" functionality. If you return `true`, the text view
+    /// will not perform its default tap behavior (moving the caret).
+    func textView(_ textView: TextView, didCommandClickAtLocation location: Int) -> Bool
 }
 
 public extension TextViewDelegate {
@@ -174,5 +183,9 @@ public extension TextViewDelegate {
 
     func textView(_ textView: TextView, customMenuFor range: NSRange, suggestedActions: [UIMenuElement]) -> [UIMenuElement]? {
         nil
+    }
+
+    func textView(_ textView: TextView, didCommandClickAtLocation location: Int) -> Bool {
+        false
     }
 }

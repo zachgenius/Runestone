@@ -1155,6 +1155,18 @@ private extension TextView {
         }
         if gestureRecognizer.state == .ended {
             let point = gestureRecognizer.location(in: textInputView)
+
+            // Check for Command+click (go-to-definition gesture)
+            if gestureRecognizer.modifierFlags.contains(.command) {
+                // Convert point to text location
+                if let location = textInputView.closestIndex(to: point) {
+                    let handled = editorDelegate?.textView(self, didCommandClickAtLocation: location) ?? false
+                    if handled {
+                        return // Don't do normal tap behavior
+                    }
+                }
+            }
+
             let oldSelectedRange = textInputView.selectedRange
             textInputView.moveCaret(to: point)
             if textInputView.selectedRange != oldSelectedRange {
