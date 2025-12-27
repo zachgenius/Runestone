@@ -25,9 +25,18 @@ final class GutterWidthService {
     }
     var gutterLeadingPadding: CGFloat = 0
     var gutterTrailingPadding: CGFloat = 0
+    /// Width of the leading indicator area (for breakpoints, etc.)
+    var gutterLeadingIndicatorWidth: CGFloat = 0 {
+        didSet {
+            if gutterLeadingIndicatorWidth != oldValue {
+                sendGutterWidthUpdatedIfNeeded()
+            }
+        }
+    }
     var gutterWidth: CGFloat {
-        if showLineNumbers {
-            return lineNumberWidth + gutterLeadingPadding + gutterTrailingPadding
+        if showLineNumbers || gutterLeadingIndicatorWidth > 0 {
+            let lineNumWidth = showLineNumbers ? lineNumberWidth + gutterLeadingPadding + gutterTrailingPadding : 0
+            return gutterLeadingIndicatorWidth + lineNumWidth
         } else {
             return 0
         }

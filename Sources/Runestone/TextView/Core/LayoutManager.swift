@@ -113,16 +113,24 @@ final class LayoutManager {
     let gutterContainerView = UIView()
     private var lineFragmentViewReuseQueue = ViewReuseQueue<LineFragmentID, LineFragmentView>()
     private var lineNumberLabelReuseQueue = ViewReuseQueue<DocumentLineNodeID, LineNumberView>()
+    private var gutterLeadingIndicatorReuseQueue = ViewReuseQueue<DocumentLineNodeID, GutterLeadingIndicatorView>()
     private var visibleLineIDs: Set<DocumentLineNodeID> = []
     private let linesContainerView = UIView()
     private let gutterBackgroundView = GutterBackgroundView()
     private let lineNumbersContainerView = UIView()
+    private let gutterLeadingIndicatorContainerView = UIView()
     private let gutterSelectionBackgroundView = UIView()
     private let lineSelectionBackgroundView = UIView()
 
+    // MARK: - Gutter Leading Indicator Support
+    weak var gutterLeadingViewProvider: GutterLeadingViewProvider?
+    weak var textView: TextView?
+    /// Cached indicators from the provider, keyed by line number (1-indexed)
+    private var cachedIndicators: [Int: GutterLeadingIndicator] = [:]
+
     // MARK: - Sizing
     private var leadingLineSpacing: CGFloat {
-        if showLineNumbers {
+        if showLineNumbers || gutterWidthService.gutterLeadingIndicatorWidth > 0 {
             return gutterWidthService.gutterWidth + textContainerInset.left
         } else {
             return textContainerInset.left
@@ -320,6 +328,7 @@ extension LayoutManager {
         gutterContainerView.frame = CGRect(x: viewport.minX, y: 0, width: totalGutterWidth, height: contentSize.height)
         gutterBackgroundView.frame = CGRect(x: 0, y: viewport.minY, width: totalGutterWidth, height: viewport.height)
         lineNumbersContainerView.frame = CGRect(x: 0, y: 0, width: totalGutterWidth, height: contentSize.height)
+        gutterLeadingIndicatorContainerView.frame = CGRect(x: 0, y: 0, width: totalGutterWidth, height: contentSize.height)
     }
 
     private func layoutLineSelection() {
@@ -389,6 +398,29 @@ extension LayoutManager {
         guard viewport.size.width > 0 && viewport.size.height > 0 else {
             return
         }
+        // Pre-fetch indicators for visible lines if we have a provider
+        if let provider = gutterLeadingViewProvider, let textView = textView {
+            var visibleLineNumbers: [Int] = []
+            var scanLine = lineManager.line(containingYOffset: insetViewport.minY)
+            var scanY = insetViewport.minY
+            while let line = scanLine, scanY < insetViewport.maxY {
+                visibleLineNumbers.append(line.index + 1)
+                let lineController = lineControllerStorage.getOrCreateLineController(for: line)
+                scanY += lineController.lineHeight
+                if line.index < lineManager.lineCount - 1 {
+                    scanLine = lineManager.line(atRow: line.index + 1)
+                } else {
+                    scanLine = nil
+                }
+            }
+            if !visibleLineNumbers.isEmpty {
+                let indicators = provider.textView(textView, indicatorsForVisibleLines: visibleLineNumbers)
+                cachedIndicators.removeAll()
+                for indicator in indicators {
+                    cachedIndicators[indicator.lineNumber] = indicator
+                }
+            }
+        }
         let oldVisibleLineIDs = visibleLineIDs
         let oldVisibleLineFragmentIDs = Set(lineFragmentViewReuseQueue.visibleViews.keys)
         // Layout lines until we have filled the viewport.
@@ -406,6 +438,7 @@ extension LayoutManager {
             lineController.constrainingWidth = constrainingLineWidth
             lineController.prepareToDisplayString(in: lineLocalViewport, syntaxHighlightAsynchronously: true)
             layoutLineNumberView(for: line)
+            layoutGutterLeadingIndicator(for: line)
             // Layout line fragments ("sublines") in the line until we have filled the viewport.
             let lineYPosition = line.yPosition
             let lineFragmentControllers = lineController.lineFragmentControllers(in: insetViewport)
@@ -451,6 +484,7 @@ extension LayoutManager {
         }
         lineNumberLabelReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
         lineFragmentViewReuseQueue.enqueueViews(withKeys: disappearedLineFragmentIDs)
+        gutterLeadingIndicatorReuseQueue.enqueueViews(withKeys: disappearedLineIDs)
         // Adjust the content offset on the Y-axis if necessary.
         if contentOffsetAdjustmentY != 0 {
             let contentOffsetAdjustment = CGPoint(x: 0, y: contentOffsetAdjustmentY)
@@ -465,7 +499,7 @@ extension LayoutManager {
         }
         let lineController = lineControllerStorage.getOrCreateLineController(for: line)
         let fontLineHeight = theme.lineNumberFont.lineHeight
-        let xPosition = safeAreaInsets.left + gutterWidthService.gutterLeadingPadding
+        let xPosition = safeAreaInsets.left + gutterWidthService.gutterLeadingIndicatorWidth + gutterWidthService.gutterLeadingPadding
         var yPosition = textContainerInset.top + line.yPosition
         if lineController.numberOfLineFragments > 1 {
             // There are more than one line fragments, so we align the line number at the top.
@@ -509,6 +543,86 @@ extension LayoutManager {
         }
     }
 
+    // MARK: - Gutter Leading Indicators
+
+    /// Refreshes indicators from the provider for currently visible lines.
+    /// Call this when breakpoints change or after scrolling.
+    func refreshGutterLeadingIndicators() {
+        updateIndicatorCache()
+        // Re-layout all visible indicators
+        setNeedsLayout()
+        layoutIfNeeded()
+    }
+
+    /// Updates the cached indicators from the provider without triggering layout.
+    private func updateIndicatorCache() {
+        guard let provider = gutterLeadingViewProvider, let textView = textView else {
+            cachedIndicators.removeAll()
+            return
+        }
+
+        // Get the list of visible line numbers (1-indexed)
+        let visibleLineNumbers = visibleLineIDs.compactMap { lineID -> Int? in
+            guard let lineController = lineControllerStorage[lineID] else { return nil }
+            return lineController.line.index + 1  // Convert to 1-indexed
+        }.sorted()
+
+        guard !visibleLineNumbers.isEmpty else {
+            cachedIndicators.removeAll()
+            return
+        }
+
+        // Query the provider for indicators
+        let indicators = provider.textView(textView, indicatorsForVisibleLines: visibleLineNumbers)
+
+        // Cache the indicators by line number
+        cachedIndicators.removeAll()
+        for indicator in indicators {
+            cachedIndicators[indicator.lineNumber] = indicator
+        }
+    }
+
+    private func layoutGutterLeadingIndicator(for line: DocumentLineNode) {
+        let lineNumber = line.index + 1  // 1-indexed
+        let indicatorWidth = gutterWidthService.gutterLeadingIndicatorWidth
+
+        guard indicatorWidth > 0 else {
+            return
+        }
+
+        // Check cache for indicator (pre-populated in layoutLinesInViewport)
+        if let indicator = cachedIndicators[lineNumber] {
+            let indicatorView = gutterLeadingIndicatorReuseQueue.dequeueView(forKey: line.id)
+            if indicatorView.superview == nil {
+                gutterLeadingIndicatorContainerView.addSubview(indicatorView)
+            }
+
+            let lineController = lineControllerStorage.getOrCreateLineController(for: line)
+            let lineHeight = lineController.lineHeight
+
+            // Position the indicator view
+            let xPosition = safeAreaInsets.left
+            let yPosition = textContainerInset.top + line.yPosition
+            indicatorView.frame = CGRect(x: xPosition, y: yPosition, width: indicatorWidth, height: lineHeight)
+            indicatorView.configure(with: indicator)
+        } else {
+            // No indicator for this line - enqueue the view if it was visible
+            gutterLeadingIndicatorReuseQueue.enqueueViews(withKeys: [line.id])
+        }
+    }
+
+    /// Returns the line number (1-indexed) at the given point in the gutter, if any.
+    func lineNumber(at point: CGPoint, in view: UIView) -> Int? {
+        let convertedPoint = view.convert(point, to: gutterContainerView)
+        let adjustedY = convertedPoint.y - textContainerInset.top
+
+        // Find which line this y position corresponds to
+        if let line = lineManager.line(containingYOffset: adjustedY) {
+            return line.index + 1  // 1-indexed
+        }
+        return nil
+    }
+
     private func setupViewHierarchy() {
         // Remove views from view hierarchy
         lineSelectionBackgroundView.removeFromSuperview()
@@ -517,6 +631,7 @@ extension LayoutManager {
         gutterBackgroundView.removeFromSuperview()
         gutterSelectionBackgroundView.removeFromSuperview()
         lineNumbersContainerView.removeFromSuperview()
+        gutterLeadingIndicatorContainerView.removeFromSuperview()
         let allLineNumberKeys = lineFragmentViewReuseQueue.visibleViews.keys
         lineFragmentViewReuseQueue.enqueueViews(withKeys: Set(allLineNumberKeys))
         // Add views to view hierarchy
@@ -525,13 +640,16 @@ extension LayoutManager {
         gutterParentView?.addSubview(gutterContainerView)
         gutterContainerView.addSubview(gutterBackgroundView)
         gutterContainerView.addSubview(gutterSelectionBackgroundView)
+        gutterContainerView.addSubview(gutterLeadingIndicatorContainerView)
         gutterContainerView.addSubview(lineNumbersContainerView)
     }
 
     private func updateShownViews() {
         let selectedLength = selectedRange?.length ?? 0
-        gutterBackgroundView.isHidden = !showLineNumbers
+        let hasIndicatorWidth = gutterWidthService.gutterLeadingIndicatorWidth > 0
+        gutterBackgroundView.isHidden = !showLineNumbers && !hasIndicatorWidth
         lineNumbersContainerView.isHidden = !showLineNumbers
+        gutterLeadingIndicatorContainerView.isHidden = !hasIndicatorWidth
         gutterSelectionBackgroundView.isHidden = !lineSelectionDisplayType.shouldShowLineSelection || !showLineNumbers || !isEditing
         lineSelectionBackgroundView.isHidden = !lineSelectionDisplayType.shouldShowLineSelection || !isEditing || selectedLength > 0
     }

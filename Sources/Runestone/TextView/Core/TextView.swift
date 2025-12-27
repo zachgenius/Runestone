@@ -448,6 +448,23 @@ open class TextView: UIScrollView {
             textInputView.gutterMinimumCharacterCount = newValue
         }
     }
+    /// Provider for custom leading indicator views in the gutter (e.g., breakpoints, bookmarks).
+    /// The provider supplies indicators for visible lines and handles tap gestures.
+    public weak var gutterLeadingViewProvider: GutterLeadingViewProvider? {
+        didSet {
+            if let provider = gutterLeadingViewProvider {
+                textInputView.gutterLeadingIndicatorWidth = provider.gutterLeadingIndicatorWidth
+                textInputView.layoutManager.gutterLeadingViewProvider = provider
+                textInputView.layoutManager.textView = self
+            } else {
+                textInputView.gutterLeadingIndicatorWidth = 0
+                textInputView.layoutManager.gutterLeadingViewProvider = nil
+                textInputView.layoutManager.textView = nil
+            }
+            setupGutterGesturesIfNeeded()
+            refreshGutterLeadingIndicators()
+        }
+    }
     /// The amount of spacing surrounding the lines.
     public var textContainerInset: UIEdgeInsets {
         get {
@@ -615,6 +632,8 @@ open class TextView: UIScrollView {
     }
     private var _editMenuInteraction: Any?
     private let tapGestureRecognizer = QuickTapGestureRecognizer()
+    private var gutterTapGestureRecognizer: UITapGestureRecognizer?
+    private var gutterLongPressGestureRecognizer: UILongPressGestureRecognizer?
     private var _inputAccessoryView: UIView?
     private var isPerformingNonEditableTextInteraction = false
     private var delegateAllowsEditingToBegin: Bool {
@@ -992,6 +1011,12 @@ open class TextView: UIScrollView {
     public func redisplayVisibleLines() {
         textInputView.redisplayVisibleLines()
     }
+
+    /// Refreshes the gutter leading indicators (e.g., breakpoints) for visible lines.
+    /// Call this when breakpoints change or when the provider's data has been updated.
+    public func refreshGutterLeadingIndicators() {
+        textInputView.layoutManager.refreshGutterLeadingIndicators()
+    }
 }
 
 // MARK: - UITextInput
@@ -1237,6 +1262,66 @@ private extension TextView {
     private func moveCaret(byOffset offset: Int) {
         if let selectedRange = textInputView.selectedRange {
             textInputView.selectedRange = NSRange(location: selectedRange.location + offset, length: 0)
+        }
+    }
+
+    private func setupGutterGesturesIfNeeded() {
+        // Remove existing gestures if any
+        if let tap = gutterTapGestureRecognizer {
+            textInputView.gutterContainerView.removeGestureRecognizer(tap)
+            gutterTapGestureRecognizer = nil
+        }
+        if let longPress = gutterLongPressGestureRecognizer {
+            textInputView.gutterContainerView.removeGestureRecognizer(longPress)
+            gutterLongPressGestureRecognizer = nil
+        }
+
+        guard gutterLeadingViewProvider != nil else {
+            textInputView.gutterContainerView.isUserInteractionEnabled = false
+            return
+        }
+
+        // Enable user interaction on gutter container
+        textInputView.gutterContainerView.isUserInteractionEnabled = true
+
+        // Add tap gesture
+        let tap = UITapGestureRecognizer(target: self, action: #selector(handleGutterTap(_:)))
+        textInputView.gutterContainerView.addGestureRecognizer(tap)
+        gutterTapGestureRecognizer = tap
+
+        // Add long press gesture
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleGutterLongPress(_:)))
+        textInputView.gutterContainerView.addGestureRecognizer(longPress)
+        gutterLongPressGestureRecognizer = longPress
+    }
+
+    @objc private func handleGutterTap(_ gesture: UITapGestureRecognizer) {
+        guard gesture.state == .ended, let provider = gutterLeadingViewProvider else {
+            return
+        }
+        let point = gesture.location(in: textInputView.gutterContainerView)
+        // Only handle taps in the leading indicator area
+        let indicatorWidth = provider.gutterLeadingIndicatorWidth
+        guard point.x <= safeAreaInsets.left + indicatorWidth else {
+            return
+        }
+        if let lineNumber = textInputView.layoutManager.lineNumber(at: point, in: textInputView.gutterContainerView) {
+            provider.textView(self, didTapGutterLeadingAreaForLine: lineNumber)
+        }
+    }
+
+    @objc private func handleGutterLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began, let provider = gutterLeadingViewProvider else {
+            return
+        }
+        let point = gesture.location(in: textInputView.gutterContainerView)
+        // Only handle taps in the leading indicator area
+        let indicatorWidth = provider.gutterLeadingIndicatorWidth
+        guard point.x <= safeAreaInsets.left + indicatorWidth else {
+            return
+        }
+        if let lineNumber = textInputView.layoutManager.lineNumber(at: point, in: textInputView.gutterContainerView) {
+            provider.textView(self, didLongPressGutterLeadingAreaForLine: lineNumber)
         }
     }
 

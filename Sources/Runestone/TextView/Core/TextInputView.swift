@@ -539,6 +539,16 @@ final class TextInputView: UIView, UITextInput {
     var gutterContainerView: UIView {
         layoutManager.gutterContainerView
     }
+    var gutterLeadingIndicatorWidth: CGFloat {
+        get {
+            gutterWidthService.gutterLeadingIndicatorWidth
+        }
+        set {
+            gutterWidthService.gutterLeadingIndicatorWidth = newValue
+            layoutManager.setNeedsLayout()
+            setNeedsLayout()
+        }
+    }
     private(set) var stringView = StringView() {
         didSet {
             if stringView !== oldValue {
@@ -586,7 +596,7 @@ final class TextInputView: UIView, UITextInput {
     }
     private let lineControllerFactory: LineControllerFactory
     private let lineControllerStorage: LineControllerStorage
-    private let layoutManager: LayoutManager
+    let layoutManager: LayoutManager
     private(set) var timedUndoManager = TimedUndoManager()
     private let indentController: IndentController
     private let lineMovementController: LineMovementController
